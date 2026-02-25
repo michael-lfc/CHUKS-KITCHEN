@@ -1,0 +1,168 @@
+// =======================
+// DATASOURCE & GENERATOR
+// =======================
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// =======================
+// ENUMS
+// =======================
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PREPARING
+  OUT_FOR_DELIVERY
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+// =======================
+// USER ROLE ENUM
+// =======================
+
+enum UserRole {
+  CUSTOMER
+  ADMIN
+}
+
+
+// =======================
+// RATING
+// =======================
+
+model Rating {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  foodId    Int
+  value     Int      // 1 to 5 stars
+  comment   String?  // Optional feedback
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+  food Food @relation(fields: [foodId], references: [id])
+
+  @@unique([userId, foodId]) // one rating per user per food
+}
+
+
+// =======================
+// USER
+// =======================
+
+model User {
+  id           Int       @id @default(autoincrement())
+  name         String
+  email        String    @unique
+  phone        String?   @unique
+  otp          String?
+  otpExpiresAt DateTime?
+  isVerified   Boolean   @default(false)
+  role         UserRole  @default(CUSTOMER) // <-- Added role field
+
+  cart         Cart?
+  orders       Order[]
+  ratings Rating[]
+
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+// =======================
+// FOOD
+// =======================
+
+model Food {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  price       Float
+  imageUrl    String?
+  publicId    String?  // Cloudinary public_id
+  isAvailable Boolean  @default(true)
+
+  cartItems   CartItem[]
+  orderItems  OrderItem[]
+
+  ratings Rating[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// =======================
+// CART
+// =======================
+
+model Cart {
+  id        Int        @id @default(autoincrement())
+  userId    Int        @unique
+  user      User       @relation(fields: [userId], references: [id])
+  items     CartItem[]
+
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+// =======================
+// CART ITEM
+// =======================
+
+model CartItem {
+  id        Int      @id @default(autoincrement())
+  cartId    Int
+  foodId    Int
+  quantity  Int      @default(1)
+
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  food      Food     @relation(fields: [foodId], references: [id])
+
+  @@unique([cartId, foodId])
+}
+
+// =======================
+// ORDER
+// =======================
+
+model Order {
+  id            Int           @id @default(autoincrement())
+  userId        Int
+  user          User          @relation(fields: [userId], references: [id])
+
+  totalAmount   Float
+  status        OrderStatus   @default(PENDING)
+  paymentStatus PaymentStatus @default(PENDING)
+
+  items         OrderItem[]
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+// =======================
+// ORDER ITEM
+// =======================
+
+model OrderItem {
+  id        Int    @id @default(autoincrement())
+  orderId   Int
+  foodId    Int
+  quantity  Int
+  price     Float   // snapshot of price at time of order
+
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  food      Food    @relation(fields: [foodId], references: [id])
+}
