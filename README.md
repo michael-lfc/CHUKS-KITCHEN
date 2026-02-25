@@ -330,7 +330,7 @@ Database (PostgreSQL/MySQL supported by Prisma)
 
 Setup Steps
 # Clone repository
-git clone <repository-url>
+git clone https://github.com/michael-lfc/CHUKS-KITCHEN
 
 # Navigate to project folder
 cd chuks-kitchen-backend
