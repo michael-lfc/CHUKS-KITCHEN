@@ -1,202 +1,380 @@
-Chuks Kitchen API 🍽️
-Project Overview
+🍽️ Chuks Kitchen Backend API
 
-Chuks Kitchen is a backend API for a food ordering system. It allows users to:
+A robust backend system for a food ordering platform that allows users to browse food items, manage carts, place orders, and rate meals. The system is designed using clean architecture principles with proper validation, error handling, and scalability considerations.
 
-Register and login using OTP verification
+📌 System Overview
 
-Browse available foods
+This system provides RESTful APIs that support the full lifecycle of a food ordering experience.
 
-Add foods to a cart, update quantities, or remove items
+End-to-End Workflow
 
-Place orders directly from their cart
+Users register and verify their account.
 
-Rate food items after ordering
+Users browse available food items.
 
-Admins (simulated) can manage foods and update payment status
+Users add food items to their cart.
 
-The backend is built using Node.js, Express, Prisma ORM, and PostgreSQL. All APIs follow REST principles.
+Users update cart quantities as needed.
 
-System Architecture
-User ↔ API Server (Express) ↔ Database (PostgreSQL via Prisma)
+Users place an order from the cart.
 
-User: Interacts via frontend or Postman.
+Orders transition through payment states.
 
-API Server: Handles routes for Users, Foods, Cart, Orders, Ratings.
+Users can rate food items after ordering.
 
-Database: Stores users, foods, carts, orders, and ratings.
+The backend ensures data integrity, consistency, and secure operations through layered validation and database constraints.
 
-Flows
-1. User Registration & Login
+🔄 Flow Explanation
+👤 User Registration & Authentication Flow
 
-User submits name, email, phone.
+User submits registration details.
 
-System checks for duplicate email or phone.
+System validates required fields and uniqueness (email/phone).
 
-OTP generated → stored in database with 5-min expiration.
+User record is created with verification status set to false.
 
-User verifies OTP → account marked as verified.
+OTP is generated and sent to the user.
 
-User can login → a new OTP is sent for authentication.
+User verifies OTP.
 
-Decisions:
+Account becomes active for login.
 
-OTP ensures secure login without password.
+Why this design?
 
-Duplicate checks prevent conflicts.
+Prevents fake or invalid accounts
 
-2. Food Management
+Enables secure onboarding
 
-GET /api/foods: Returns all available foods.
+Supports future authentication extensions
 
-POST /api/foods: Admin can add food (simulated).
+🛒 Cart Management Flow
 
-PUT /api/foods/:id: Admin updates food info.
+User selects a food item.
 
-DELETE /api/foods/:id: Admin removes food.
+System checks food availability.
 
-Decisions:
+System retrieves existing cart or creates one automatically.
 
-Only verified admins can manage foods.
+Item is added or quantity updated.
 
-Optional image upload handled via Cloudinary.
+Cart total is recalculated.
 
-3. Cart Management
+Why this design?
 
-User adds food to cart (POST /api/cart/add).
+Ensures every user always has a cart
 
-System checks if food exists & is available.
+Prevents duplicate cart entries
 
-If item exists in cart → quantity updated; else → new item added.
+Maintains accurate pricing
 
-User can view cart, update quantities, remove items, or clear cart.
+📦 Order Creation Flow
 
-Decisions:
+User initiates checkout.
 
-getOrCreateCart ensures each user always has a cart.
+System verifies cart is not empty.
 
-Prevents quantity <= 0.
+Order is created using a snapshot of cart items.
 
-4. Orders
+Order status set to PENDING.
 
-User places order (POST /api/orders).
+Payment status updated separately.
 
-System calculates total based on cart items and food prices.
+Cart may be cleared after successful order creation.
 
-Creates order, saves snapshot of food price, clears cart.
+Why this design?
 
-Users can view orders, cancel pending orders.
+Protects historical order data
 
-Admin can update payment status (PENDING, PAID, FAILED).
+Ensures pricing consistency even if food prices change later
 
-Decisions:
+Supports external payment integration
 
-Snapshot prices ensure order reflects exact purchase amount.
+⭐ Rating Flow
 
-Only pending orders can be cancelled.
+User submits rating for a food item.
 
-5. Ratings
+System validates rating range (1–5).
 
-Users can rate foods (POST /api/ratings) after ordering.
+System verifies food exists.
 
-System supports upsert → user can update previous rating.
+Rating is stored using upsert:
 
-Ratings include value (1–5) and optional comment.
+New rating created OR
 
-Average rating computed for each food.
+Existing rating updated
 
-Decisions:
+Average rating recalculated when queried.
 
-Enforces 1–5 scale.
+Why this design?
 
-Users cannot rate non-existent foods.
+Prevents duplicate ratings per user
 
-Edge Case Handling
-Scenario	Handling
-Add unavailable food to cart	Returns Food unavailable error
-Quantity <= 0	Returns Quantity must be at least 1 error
-Duplicate email or phone	Returns Email/Phone already registered
-Login without verification	Returns Please verify your account first
-Cancel completed/cancelled order	Returns Cannot cancel error
-Invalid IDs (food, cart, order)	Returns Not found error
-OTP expired	Returns OTP has expired error
-Assumptions
+Maintains clean feedback data
 
-OTP is simulated via console logs (no real SMS/email).
+Supports dynamic average calculation
 
-Admin endpoints are simulated (no real authentication).
+⚠️ Edge Case Handling & Failure Management
 
-Each user can have only one cart at a time.
+The system includes comprehensive safeguards against invalid input, inconsistent states, and unexpected behavior.
 
-Price changes after order do not affect past orders (snapshot taken).
+🧾 Input Validation & Data Integrity
+Missing Required Fields
 
-Scalability Thoughts
+Requests missing required data return 400 Bad Request.
 
-Users grow from 100 → 10,000+
+Prevents unnecessary database operations.
 
-Add database indexes for frequent queries.
+Invalid IDs
 
-Introduce Redis caching for GET endpoints.
+IDs are validated and converted to numeric values.
 
-Implement pagination for listing foods and orders.
+Non-existent resources return 404 Not Found.
 
-Use queue system for sending OTP emails at scale.
+👤 User & Authentication Edge Cases
+Duplicate Registration
 
-Data Model
-Entities
+Email and phone fields are unique.
 
-User – id, name, email, phone, isVerified, role
+Duplicate attempts return an error.
 
-Food – id, name, price, description, imageUrl, isAvailable
+Unverified Accounts
 
-Cart – id, userId, items
+Login is blocked until OTP verification is complete.
 
-Order – id, userId, totalAmount, status, paymentStatus, items
+Expired OTP
 
-Rating – id, userId, foodId, value, comment
+OTPs include expiration timestamps.
 
-Relationships
+Expired tokens are rejected.
 
-User → Cart: One-to-One
+🛒 Cart Edge Cases
+Adding Unavailable Food
 
-Cart → CartItem → Food: Many-to-Many with quantity
+Items marked unavailable cannot be added.
 
-User → Order: One-to-Many
+Invalid Quantity
 
-Order → OrderItem → Food: Many-to-Many with quantity & price snapshot
+Quantities less than or equal to zero are rejected.
 
-User → Rating → Food: One-to-Many (user can update rating)
+Duplicate Cart Items
 
-(Optional ERD diagram can be attached as PNG in repo)
+Existing cart items are updated instead of duplicated.
 
-Technical Setup
+User Without Cart
 
-Clone repo:
+System automatically creates a cart if none exists.
 
-git clone https://github.com/realmike-osa/chuks-kitchen.git
+📦 Order Edge Cases
+Checkout with Empty Cart
 
-Install dependencies:
+Order creation is blocked.
 
+Cancelling Completed Orders
+
+Only orders with PENDING status can be cancelled.
+
+Price Changes After Order
+
+Order items store price snapshots.
+
+Historical orders remain accurate even if food prices change.
+
+⭐ Rating Edge Cases
+Invalid Rating Value
+
+Only values between 1 and 5 are accepted.
+
+Rating Non-existent Food
+
+Request rejected with 404 Not Found.
+
+Multiple Ratings by Same User
+
+Upsert prevents duplicate entries.
+
+Existing rating is updated.
+
+🧱 System-Level Protections
+
+Centralized error handling middleware
+
+Consistent API error responses
+
+Database foreign key constraints
+
+Composite unique constraints where required
+
+Async error capture using middleware
+
+📐 Assumptions
+
+Due to incomplete product specifications, the following assumptions were made:
+
+Single cart per user
+
+Payment handled externally
+
+No inventory quantity tracking
+
+Ratings allowed without purchase verification
+
+Authentication uses basic token-based logic
+
+Delivery logistics not included
+
+📈 Scalability Considerations
+For ~100 Users
+
+Single server deployment sufficient
+
+Relational database with standard indexing
+
+Minimal caching required
+
+For 10,000+ Users
+
+The system could evolve to include:
+
+Performance Enhancements
+
+Database indexing optimization
+
+Query optimization
+
+Read replicas for heavy traffic
+
+Connection pooling
+
+Infrastructure Scaling
+
+Load-balanced application servers
+
+Horizontal scaling
+
+Cloud deployment
+
+Caching Strategy
+
+Redis for frequently accessed data
+
+Cached food listings
+
+Cached average ratings
+
+Asynchronous Processing
+
+Background jobs for notifications
+
+Queue systems for heavy tasks
+
+🗂️ Data Model Overview
+Key Entities
+User
+
+Stores authentication and profile data
+
+One-to-one relationship with Cart
+
+One-to-many relationship with Orders and Ratings
+
+Food Item
+
+Represents menu items
+
+Can be rated by many users
+
+Can appear in many carts and orders
+
+Cart
+
+Belongs to one user
+
+Contains multiple cart items
+
+Order
+
+Created from cart contents
+
+Contains multiple order items
+
+Tracks payment and status
+
+Rating
+
+Links a user to a food item
+
+Composite uniqueness ensures one rating per user per food
+
+🔗 Relationship Summary
+
+User → Cart (1:1)
+
+User → Orders (1:N)
+
+User → Ratings (1:N)
+
+Food → Ratings (1:N)
+
+Cart → CartItems (1:N)
+
+Order → OrderItems (1:N)
+
+🚀 Running the Project
+Requirements
+
+Node.js (v18 or higher recommended)
+
+Package manager (npm or yarn)
+
+Database (PostgreSQL/MySQL supported by Prisma)
+
+Setup Steps
+# Clone repository
+git clone <repository-url>
+
+# Navigate to project folder
+cd chuks-kitchen-backend
+
+# Install dependencies
 npm install
 
-Create .env with database URL:
+# Configure environment variables
+Create a .env file with database connection and other configs
 
-DATABASE_URL="postgresql://username:password@localhost:5432/chukskitchen"
+# Run database migrations
+npx prisma migrate dev
 
-Run Prisma migrations:
-
-npx prisma migrate dev --name init
-
-Start server:
-
+# Start development server
 npm run dev
 
-API runs at http://localhost:5000
+Server will start on:
 
-Test APIs via Postman or integrate with a frontend.
+http://localhost:PORT
+📦 API Output Format
+Success Response
+{
+  "status": "success",
+  "data": { ... }
+}
+Error Response
+{
+  "status": "error",
+  "message": "Description of error"
+}
+🎯 Project Objectives
 
-Repository
+This project demonstrates the ability to:
 
-GitHub URL: https://github.com/realmike-osa/chuks-kitchen
+Design backend systems from product requirements
 
-All code, flow diagrams, and README included.
+Implement clean API architecture
+
+Handle complex flows and state transitions
+
+Manage edge cases effectively
+
+Model relational data
+
+Build scalable backend solutions
+
+Communicate technical design clearly
