@@ -361,6 +361,14 @@ Error Response
   "status": "error",
   "message": "Description of error"
 }
+
+API Base Routes
+/api/users
+/api/foods
+/api/cart
+/api/orders
+/api/ratings
+
 🎯 Project Objectives
 
 This project demonstrates the ability to:
