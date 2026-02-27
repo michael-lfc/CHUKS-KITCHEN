@@ -1,388 +1,256 @@
-🍽️ Chuks Kitchen Backend API
+Food Ordering API Documentation
+1. System Overview
 
-A robust backend system for a food ordering platform that allows users to browse food items, manage carts, place orders, and rate meals. The system is designed using clean architecture principles with proper validation, error handling, and scalability considerations.
+The Food Ordering API is a backend system designed to simulate a simple food delivery platform. It allows users to register, authenticate, browse food items, manage a shopping cart, place orders, and submit ratings for foods. Admin functionality is simulated via a header (x-admin: true) for operations like creating, updating, or deleting foods, and updating payment status.
 
-📌 System Overview
+Key Features:
 
-This system provides RESTful APIs that support the full lifecycle of a food ordering experience.
+User registration, OTP verification, and OTP-based login
 
-End-to-End Workflow
+Food CRUD operations with rating calculation
 
-Users register and verify their account.
+Cart management (add, update, remove, clear items)
 
-Users browse available food items.
+Order management (create, cancel, view, update payment status)
 
-Users add food items to their cart.
+Rating system (submit/update rating, get all ratings for a food)
 
-Users update cart quantities as needed.
+Error handling and validation throughout
 
-Users place an order from the cart.
+Architecture Overview:
 
-Orders transition through payment states.
+Controllers: Handle HTTP requests/responses
 
-Users can rate food items after ordering.
+Services: Contain business logic and validation
 
-The backend ensures data integrity, consistency, and secure operations through layered validation and database constraints.
+Prisma ORM: Handles database interactions
 
-🔄 Flow Explanation
-👤 User Registration & Authentication Flow
+Middleware: Error handling (asyncHandler), admin simulation (simulateAdmin), and validation
 
-User submits registration details.
+2. Flow Explanation
+2.1 User Authentication Flow
 
-System validates required fields and uniqueness (email/phone).
+Registration
 
-User record is created with verification status set to false.
+Endpoint: POST /users/register
 
-OTP is generated and sent to the user.
+Validates email and phone uniqueness
 
-User verifies OTP.
+Generates OTP and stores in DB
 
-Account becomes active for login.
+Returns success message
 
-Why this design?
+OTP Verification
 
-Prevents fake or invalid accounts
+Endpoint: POST /users/verify-otp
 
-Enables secure onboarding
+Validates OTP and expiration
 
-Supports future authentication extensions
+Marks user as verified
 
-🛒 Cart Management Flow
+Login
 
-User selects a food item.
+Endpoint: POST /users/login
 
-System checks food availability.
+Generates OTP for login
 
-System retrieves existing cart or creates one automatically.
+Ensures user is verified
 
-Item is added or quantity updated.
+Edge Case Handling:
 
-Cart total is recalculated.
+Duplicate email/phone → returns 400 error
 
-Why this design?
+Expired or invalid OTP → returns 400 error
 
-Ensures every user always has a cart
+Unverified user login → blocked
 
-Prevents duplicate cart entries
+2.2 Food Management Flow
 
-Maintains accurate pricing
+Get All Foods
 
-📦 Order Creation Flow
+Endpoint: GET /foods
 
-User initiates checkout.
+Returns all available foods with average rating
 
-System verifies cart is not empty.
+Get Food by ID
 
-Order is created using a snapshot of cart items.
+Endpoint: GET /foods/:id
 
-Order status set to PENDING.
+Returns food details with ratings
 
-Payment status updated separately.
+Admin Actions
 
-Cart may be cleared after successful order creation.
+Create Food: POST /foods with x-admin: true
 
-Why this design?
+Update Food: PUT /foods/:id with x-admin: true
 
-Protects historical order data
+Delete Food: DELETE /foods/:id with x-admin: true
 
-Ensures pricing consistency even if food prices change later
+Edge Case Handling:
 
-Supports external payment integration
+Invalid ID → returns 400 error
 
-⭐ Rating Flow
+Food not found → returns 404 error
 
-User submits rating for a food item.
+Missing required fields (name, price) → returns 400 error
 
-System validates rating range (1–5).
+Name or price invalid → returns 400 error
 
-System verifies food exists.
+2.3 Cart Management Flow
 
-Rating is stored using upsert:
+Add Item to Cart
 
-New rating created OR
+Endpoint: POST /cart/add
 
-Existing rating updated
+Validates food existence and availability
 
-Average rating recalculated when queried.
+Increases quantity if item already in cart
 
-Why this design?
+View Cart
 
-Prevents duplicate ratings per user
+Endpoint: GET /cart/:userId
 
-Maintains clean feedback data
+Returns all items in user cart with food details
 
-Supports dynamic average calculation
+Update Cart Item
 
-⚠️ Edge Case Handling & Failure Management
+Endpoint: PUT /cart/update
 
-The system includes comprehensive safeguards against invalid input, inconsistent states, and unexpected behavior.
+Updates quantity (≥1)
 
-🧾 Input Validation & Data Integrity
-Missing Required Fields
+Remove Item
 
-Requests missing required data return 400 Bad Request.
+Endpoint: DELETE /cart/remove
 
-Prevents unnecessary database operations.
+Deletes a specific item from cart
 
-Invalid IDs
+Clear Cart
 
-IDs are validated and converted to numeric values.
+Endpoint: DELETE /cart/clear/:userId
 
-Non-existent resources return 404 Not Found.
+Removes all items
 
-👤 User & Authentication Edge Cases
-Duplicate Registration
+Edge Case Handling:
 
-Email and phone fields are unique.
+Food not available → 400 error
 
-Duplicate attempts return an error.
+Cart item not found → 404 error
 
-Unverified Accounts
+Invalid quantity → 400 error
 
-Login is blocked until OTP verification is complete.
+Empty cart → 400 when creating order
 
-Expired OTP
+2.4 Order Management Flow
 
-OTPs include expiration timestamps.
+Create Order from Cart
 
-Expired tokens are rejected.
+Endpoint: POST /orders
 
-🛒 Cart Edge Cases
-Adding Unavailable Food
+Validates cart and item availability
 
-Items marked unavailable cannot be added.
+Calculates total amount
 
-Invalid Quantity
+Clears cart after order creation
 
-Quantities less than or equal to zero are rejected.
+Get Orders
 
-Duplicate Cart Items
+Endpoint: GET /orders?userId=<id> (optional)
 
-Existing cart items are updated instead of duplicated.
+Returns all orders or user-specific orders
 
-User Without Cart
+Get Order by ID
 
-System automatically creates a cart if none exists.
+Endpoint: GET /orders/:id
 
-📦 Order Edge Cases
-Checkout with Empty Cart
+Cancel Order
 
-Order creation is blocked.
+Endpoint: PUT /orders/:id/cancel
 
-Cancelling Completed Orders
+Only allows cancellation if order is not COMPLETED or CANCELLED
 
-Only orders with PENDING status can be cancelled.
+Update Payment Status (Admin simulation)
 
-Price Changes After Order
+Endpoint: PUT /orders/:id/payment with x-admin: true
 
-Order items store price snapshots.
+Validates status (PENDING, PAID, FAILED)
 
-Historical orders remain accurate even if food prices change.
+Edge Case Handling:
 
-⭐ Rating Edge Cases
-Invalid Rating Value
+Empty cart → 400 error
 
-Only values between 1 and 5 are accepted.
+Item unavailable during order → 400 error
 
-Rating Non-existent Food
+Cancelling completed or already cancelled order → 400 error
 
-Request rejected with 404 Not Found.
+Invalid order ID → 400 error
 
-Multiple Ratings by Same User
+Order not found → 404 error
 
-Upsert prevents duplicate entries.
+2.5 Rating Management Flow
 
-Existing rating is updated.
+Add/Update Rating
 
-🧱 System-Level Protections
+Endpoint: POST /ratings
 
-Centralized error handling middleware
+Upserts rating per user per food
 
-Consistent API error responses
+Validates rating value between 1–5
 
-Database foreign key constraints
+Get Ratings
 
-Composite unique constraints where required
+Endpoint: GET /ratings/:foodId
 
-Async error capture using middleware
+Returns all ratings with user info and average rating
 
-📐 Assumptions
+Edge Case Handling:
 
-Due to incomplete product specifications, the following assumptions were made:
+Invalid food ID → 400 error
 
-Single cart per user
+Rating outside 1–5 → 400 error
 
-Payment handled externally
+Food not found → 404 error
 
-No inventory quantity tracking
+3. Assumptions
 
-Ratings allowed without purchase verification
+Users are uniquely identified by email.
 
-Authentication uses basic token-based logic
+Admin access is simulated via x-admin: true.
 
-Delivery logistics not included
+OTPs are sent via console (simulation for assignment).
 
-📈 Scalability Considerations
-For ~100 Users
+Cart is auto-created if missing.
 
-Single server deployment sufficient
+Images for foods are optional; Cloudinary integration is placeholder.
 
-Relational database with standard indexing
+Ratings are single per user per food.
 
-Minimal caching required
+4. Scalability Thoughts
 
-For 10,000+ Users
+Current design: Works efficiently for hundreds of users.
 
-The system could evolve to include:
+Future improvements for 10,000+ users:
 
-Performance Enhancements
+Add pagination to GET /foods and GET /ratings/:foodId.
 
-Database indexing optimization
+Cache frequently accessed food items.
 
-Query optimization
+Queue email/SMS OTP sending for high load.
 
-Read replicas for heavy traffic
+Shard cart and order tables in the database.
 
-Connection pooling
+Separate microservices for orders, payments, and notifications.
 
-Infrastructure Scaling
-
-Load-balanced application servers
-
-Horizontal scaling
-
-Cloud deployment
-
-Caching Strategy
-
-Redis for frequently accessed data
-
-Cached food listings
-
-Cached average ratings
-
-Asynchronous Processing
-
-Background jobs for notifications
-
-Queue systems for heavy tasks
-
-🗂️ Data Model Overview
-Key Entities
-User
-
-Stores authentication and profile data
-
-One-to-one relationship with Cart
-
-One-to-many relationship with Orders and Ratings
-
-Food Item
-
-Represents menu items
-
-Can be rated by many users
-
-Can appear in many carts and orders
-
-Cart
-
-Belongs to one user
-
-Contains multiple cart items
-
-Order
-
-Created from cart contents
-
-Contains multiple order items
-
-Tracks payment and status
-
-Rating
-
-Links a user to a food item
-
-Composite uniqueness ensures one rating per user per food
-
-🔗 Relationship Summary
-
-User → Cart (1:1)
-
-User → Orders (1:N)
-
-User → Ratings (1:N)
-
-Food → Ratings (1:N)
-
-Cart → CartItems (1:N)
-
-Order → OrderItems (1:N)
-
-🚀 Running the Project
-Requirements
-
-Node.js (v18 or higher recommended)
-
-Package manager (npm or yarn)
-
-Database (PostgreSQL/MySQL supported by Prisma)
-
-Setup Steps
-# Clone repository
-git clone https://github.com/michael-lfc/CHUKS-KITCHEN
-
-# Navigate to project folder
-cd chuks-kitchen-backend
-
-# Install dependencies
-npm install
-
-# Configure environment variables
-Create a .env file with database connection and other configs
-
-# Run database migrations
-npx prisma migrate dev
-
-# Start development server
-npm run dev
-
-Server will start on:
-
-http://localhost:PORT
-📦 API Output Format
-Success Response
-{
-  "status": "success",
-  "data": { ... }
-}
-Error Response
-{
-  "status": "error",
-  "message": "Description of error"
-}
-
-API Base Routes
-/api/users
-/api/foods
-/api/cart
-/api/orders
-/api/ratings
-
-🎯 Project Objectives
-
-This project demonstrates the ability to:
-
-Design backend systems from product requirements
-
-Implement clean API architecture
-
-Handle complex flows and state transitions
-
-Manage edge cases effectively
-
-Model relational data
-
-Build scalable backend solutions
-
-Communicate technical design clearly
+5. Data Modeling
+5.1 Entity Relationship Diagram (ERD)
+User (1) ──< Cart >──< CartItem >──> Food
+User (1) ──< Order >──< OrderItem >──> Food
+User (1) ──< Rating >──> Food
+5.2 Table Overview
+Entity	Key Fields	Relationships
+User	id, name, email, phone, role	1:M → Orders, Ratings, Cart
+Food	id, name, price, isAvailable	1:M → Ratings, OrderItems, CartItems
+Cart	id, userId	1:M → CartItems
+CartItem	id, cartId, foodId, quantity	M:1 → Cart, M:1 → Food
+Order	id, userId, totalAmount, status	1:M → OrderItems
+OrderItem	id, orderId, foodId, quantity, price	M:1 → Order, M:1 → Food
+Rating	id, userId, foodId, value, comment	M:1 → User, M:1 → Food
