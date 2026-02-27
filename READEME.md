@@ -197,3 +197,16 @@ Caching: Popular foods, top-rated items, and frequently accessed ratings are cac
 Horizontal Scaling: Backend can scale horizontally using load balancers to distribute traffic if user requests grow from 100 → 10,000+ concurrently.
 
 Async Tasks: Time-consuming operations such as sending OTP emails or SMS messages are offloaded to asynchronous task queues to prevent blocking API responses.
+
+## How to Run
+1. Clone the repo.
+2. Install dependencies: npm install
+3. Setup .env (DATABASE_URL, JWT_SECRET, CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET )
+4. Run server: npm run dev
+5. Test APIs via Postman
+
+Future Improvements:
+- Real payment integration
+- Stock tracking for food items
+- Role-based access with real Admin
+- Rate limiting and security hardening
