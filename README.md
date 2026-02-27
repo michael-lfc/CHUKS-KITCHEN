@@ -199,6 +199,46 @@ Horizontal Scaling: Backend can scale horizontally using load balancers to distr
 
 Async Tasks: Time-consuming operations such as sending OTP emails or SMS messages are offloaded to asynchronous task queues to prevent blocking API responses.
 
+implemented apis
+
+1️⃣ User / Authentication APIs
+Method	Endpoint	Description
+POST	/api/users/register	Register a new user (name, email, optional phone) & generate OTP
+POST	/api/users/verify-otp	Verify OTP to activate account
+POST	/api/users/login	Login via OTP (sends OTP to user)
+2️⃣ Food APIs
+Method	Endpoint	Description
+GET	/api/foods	Get all available foods (with average ratings & rating count)
+GET	/api/foods/:id	Get food by ID (with ratings)
+POST	/api/foods	Create a new food item (Admin simulation: x-admin:true header required)
+PUT	/api/foods/:id	Update food item (Admin simulation)
+DELETE	/api/foods/:id	Delete food item (Admin simulation)
+3️⃣ Cart APIs
+Method	Endpoint	Description
+POST	/api/cart/add	Add food to cart or increment quantity
+GET	/api/cart/:userId	Get user’s cart with items and food details
+PUT	/api/cart/update	Update quantity of a cart item
+DELETE	/api/cart/remove	Remove specific item from cart
+DELETE	/api/cart/clear/:userId	Clear all items in user’s cart
+4️⃣ Order APIs
+Method	Endpoint	Description
+POST	/api/orders	Create order from user cart (validates food availability)
+GET	/api/orders	Get all orders or filter by user via query ?userId=
+GET	/api/orders/:id	Get order details by ID
+PUT	/api/orders/:id/cancel	Cancel order (only if not completed)
+PUT	/api/orders/:id/payment	Simulate payment status update (PENDING, PAID, FAILED) (Admin simulation)
+5️⃣ Ratings APIs
+Method	Endpoint	Description
+POST	/api/ratings	Submit or update rating for a food item (1–5)
+GET	/api/ratings/:foodId	Get all ratings for a food item with average rating
+6️⃣ Middleware / Simulation
+
+Admin simulation: x-admin: true header required for POST/PUT/DELETE food routes and payment update
+
+Error handling: All endpoints use asyncHandler + AppError for consistent responses
+
+Cart auto-creation: When adding items, cart is automatically created if missing
+
 ## How to Run
 1. Clone the repo.
 2. Install dependencies: npm install
